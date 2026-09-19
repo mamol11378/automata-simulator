@@ -128,13 +128,13 @@ class GraphView(QWidget):
             super().keyPressEvent(e)
 
     def _create_edge(self, source, target):
-        symbol, ok = QInputDialog.getText(self, "Transition", f"{source} → {target}\nSymbol (0, 1, ε):")
+        symbol, ok = QInputDialog.getText(self, self.window().tr("transition"), f"{source} → {target}\n{self.window().tr("symbol_prompt")}")
         if ok and symbol.strip():
             try:
                 self.automaton.add_transition(source, symbol.strip(), target)
                 self.changed.emit()
             except Exception as ex:
-                QMessageBox.warning(self, "Transition", str(ex))
+                QMessageBox.warning(self, self.window().tr("transition"), str(ex))
 
     def _edge_pairs(self):
         pairs = {}
@@ -158,7 +158,7 @@ class GraphView(QWidget):
         if not self.automaton or not self.automaton.states:
             p.setPen(QColor("#64748b"))
             p.setFont(QFont("Segoe UI", 13))
-            p.drawText(self.rect(), Qt.AlignCenter, "Double-click the canvas to create q0")
+            p.drawText(self.rect(), Qt.AlignCenter, "برای ساخت q0 روی بوم دوبار کلیک کنید" if getattr(self.window(),"lang","en")=="fa" else "Double-click the canvas to create q0")
             return
         pairs = self._edge_pairs()
         active_pairs = set()
@@ -247,6 +247,7 @@ class MainWindow(QMainWindow):
         self.path=[self.current]
         self.input_index=0
         self._build()
+        self.setLayoutDirection(Qt.LeftToRight)
         self._refresh()
 
     def sample(self):
@@ -351,7 +352,7 @@ class MainWindow(QMainWindow):
 
     def toggle_edge(self,on):
         self.design_graph.edge_mode=on
-        self.edge_btn.setText("✓ Edge mode" if on else "Draw Transition")
+        self.edge_btn.setText(self.tr("edge_mode") if on else self.tr("edge_draw"))
 
     def set_start(self):
         s=self.design_graph.selected
@@ -401,13 +402,13 @@ class MainWindow(QMainWindow):
         "designer":"طراحی ماشین","simulator":"شبیه‌ساز","table":"جدول انتقال","convert":"NFA → DFA",
         "current":"حالت فعلی","result":"نتیجه","ready":"آماده","run":"اجرا","step":"مرحله بعد","reset":"بازنشانی",
         "draw":"رسم انتقال","start":"شروع","final":"نهایی","delete":"حذف حالت","state":"حالت","path":"مسیر",
-        "convert_now":"تبدیل NFA فعلی به DFA","accepted":"پذیرفته شد ✓","rejected":"رد شد ✕"
+        "convert_now":"تبدیل NFA فعلی به DFA","accepted":"پذیرفته شد ✓","rejected":"رد شد ✕","add_state":"+ حالت","edge_mode":"✓ حالت رسم","edge_draw":"رسم انتقال","hint":"دوبارکلیک = حالت جدید  •  کشیدن = جابه‌جایی  •  رسم انتقال = اتصال دو حالت  •  Delete = حذف حالت","error":"خطا","conversion":"تبدیل","set_start_first":"ابتدا یک حالت شروع تعیین کنید.","already_dfa":"ماشین فعلی از قبل DFA است.","dfa_created":"DFA با روش ساخت زیرمجموعه‌ای ساخته شد","states":"حالت‌ها","start_state":"شروع","final_states":"نهایی","transitions":"انتقال‌ها","no_final":"—","transition":"انتقال","symbol_prompt":"نماد (0، 1، ε):"
         }
         en={
         "designer":"Designer","simulator":"Simulator","table":"Transition Table","convert":"NFA → DFA",
         "current":"Current State","result":"Result","ready":"Ready","run":"Run","step":"Step","reset":"Reset",
         "draw":"Draw Transition","start":"Set Start","final":"Toggle Final","delete":"Delete State","state":"State","path":"Path",
-        "convert_now":"Convert current NFA to DFA","accepted":"Accepted ✓","rejected":"Rejected ✕"
+        "convert_now":"Convert current NFA to DFA","accepted":"Accepted ✓","rejected":"Rejected ✕","add_state":"+ State","edge_mode":"✓ Edge mode","edge_draw":"Draw Transition","hint":"Double-click = new state  •  Drag = move  •  Draw Transition = connect two states  •  Delete = remove selected state","error":"Error","conversion":"Conversion","set_start_first":"Set a start state first.","already_dfa":"The current machine is already a DFA.","dfa_created":"DFA created by subset construction","states":"States","start_state":"Start","final_states":"Final","transitions":"Transitions","no_final":"—","transition":"Transition","symbol_prompt":"Symbol (0, 1, ε):"
         }
         return (fa if self.lang=="fa" else en).get(k,k)
 
@@ -418,12 +419,12 @@ class MainWindow(QMainWindow):
         self.ttitle.setText(self.tr("table")); self.ctitle.setText(self.tr("convert"))
         typ="DFA" if self.machine.is_deterministic() else "NFA"
         for b in (self.dbadge,self.sbadge,self.tbadge,self.cbadge):b.setText(typ)
-        self.add_btn.setText("+ State")
+        self.add_btn.setText(self.tr("add_state"))
         self.start_btn.setText(self.tr("start")); self.final_btn.setText(self.tr("final")); self.delete_btn.setText(self.tr("delete"))
-        self.edge_btn.setText("Draw Transition" if not self.edge_btn.isChecked() else "✓ Edge mode")
+        self.edge_btn.setText(self.tr("edge_mode") if self.edge_btn.isChecked() else self.tr("edge_draw"))
         self.run.setText(self.tr("run")); self.step.setText(self.tr("step")); self.reset.setText(self.tr("reset"))
         self.convert.setText(self.tr("convert_now"))
-        self.design_hint.setText("Double-click = new state  •  Drag = move  •  Draw Transition = connect two states  •  Delete = remove selected state")
+        self.design_hint.setText(self.tr("hint"))
 
     def navigate(self,k):
         self.stack.setCurrentIndex({"designer":0,"simulator":1,"table":2,"convert":3}[k])
@@ -437,7 +438,7 @@ class MainWindow(QMainWindow):
     def run_sim(self):
         text=self.input.text().strip()
         try:
-            if not self.machine.start: raise ValueError("Set a start state first.")
+            if not self.machine.start: raise ValueError(self.tr("set_start_first"))
             if self.machine.is_deterministic():
                 ok,path=self.machine.simulate_dfa(text)
                 self.current=path[-1]; self.path=path
@@ -449,7 +450,7 @@ class MainWindow(QMainWindow):
             self.current_label.setText(f"{self.tr('current')}: {self.current}")
             self.status.setText(f"{self.tr('result')}: {self.tr('accepted') if ok else self.tr('rejected')}")
             self.path_label.setText(f"{self.tr('path')}: " + " → ".join(self.path))
-        except Exception as ex: QMessageBox.warning(self,"Error",str(ex))
+        except Exception as ex: QMessageBox.warning(self,self.tr("error"),str(ex))
 
     def step_sim(self):
         text=self.input.text().strip()
@@ -475,16 +476,18 @@ class MainWindow(QMainWindow):
 
     def convert_nfa(self):
         try:
-            if self.machine.is_deterministic(): raise ValueError("The current machine is already a DFA.")
+            if self.machine.is_deterministic(): raise ValueError(self.tr("already_dfa"))
             dfa=self.machine.to_dfa()
             self.cg.set_automaton(dfa,dfa.start)
-            lines=["DFA created by subset construction","",f"States: {', '.join(dfa.states)}",f"Start: {dfa.start}",f"Final: {', '.join(sorted(dfa.finals)) or '—'}","", "Transitions:"]
+            lines=[self.tr("dfa_created"),"",f"{self.tr("states")}: {', '.join(dfa.states)}",f"{self.tr("start_state")}: {dfa.start}",f"{self.tr("final_states")}: {', '.join(sorted(dfa.finals)) or self.tr("no_final")}","",f"{self.tr("transitions")}:"]
             lines += [f"{t.source} --{t.symbol}--> {t.target}" for t in dfa.transitions]
             self.cinfo.setPlainText("\n".join(lines))
-        except Exception as ex: QMessageBox.warning(self,"Conversion",str(ex))
+        except Exception as ex: QMessageBox.warning(self,self.tr("conversion"),str(ex))
 
     def toggle_lang(self):
-        self.lang="fa" if self.lang=="en" else "en"; self._refresh()
+        self.lang="fa" if self.lang=="en" else "en"
+        self.setLayoutDirection(Qt.RightToLeft if self.lang=="fa" else Qt.LeftToRight)
+        self._refresh()
 
 if __name__=="__main__":
     app=QApplication(sys.argv); app.setStyle("Fusion")
