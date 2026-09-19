@@ -185,7 +185,7 @@ class MainWindow(QMainWindow):
         add_state=QPushButton(); add_state.clicked.connect(self.add_state)
         self.state_list=QListWidget(); self.state_list.currentItemChanged.connect(self.select_state)
         del_state=QPushButton(); del_state.clicked.connect(self.delete_state)
-        self.start_check=QCheckBox(); self.final_check=QCheckBox()
+        self.start_check=QCheckBox(); self.final_check=QCheckBox()\n        self.start_check.stateChanged.connect(self.set_state_flags); self.final_check.stateChanged.connect(self.set_state_flags)
         ll.addWidget(QLabel("State name")); ll.addWidget(self.state_name); ll.addWidget(add_state); ll.addWidget(self.state_list,1)
         ll.addWidget(del_state); ll.addWidget(self.start_check); ll.addWidget(self.final_check)
         form=QGroupBox(); fl=QFormLayout(form)
