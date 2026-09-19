@@ -492,4 +492,330 @@ class MainWindow(QMainWindow):
 if __name__=="__main__":
     app=QApplication(sys.argv); app.setStyle("Fusion")
     app.setStyleSheet("QMainWindow,QWidget{background:#10141c;color:#e5e7eb;font-family:'Segoe UI';} QHeaderView::section{background:#1b212c;color:#cbd5e1;padding:8px;border:0;} QTableWidget{background:#121720;color:#e5e7eb;gridline-color:#303746;border:1px solid #272f3d;}")
+    win=MainWindow(); win.show(); sys.exit(app.exec())from grammar import ContextFreeGrammar
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.lang="en"
+        self.machine=self.sample()
+        self.current=self.machine.start
+        self.path=[self.current]
+        self.input_index=0
+        self.grammar=ContextFreeGrammar()
+        self.grammar_text="S -> a A\nA -> b A | ε"
+        self._build()
+        self.setLayoutDirection(Qt.LeftToRight)
+        self._refresh()
+
+    def sample(self):
+        return FiniteAutomaton(
+            ["q0","q1","q2"], ["0","1"],
+            [Transition("q0","0","q1"),Transition("q0","1","q0"),
+             Transition("q1","0","q1"),Transition("q1","1","q2"),
+             Transition("q2","0","q2"),Transition("q2","1","q0")],
+            "q0", {"q2"})
+
+    def _build(self):
+        self.setMinimumSize(1200,780)
+        root=QWidget(); self.setCentralWidget(root)
+        outer=QHBoxLayout(root); outer.setContentsMargins(0,0,0,0)
+        self.sidebar=QFrame(); self.sidebar.setFixedWidth(220)
+        self.sidebar.setStyleSheet("QFrame{background:#0a0d13;} QPushButton{color:#aeb8c8;background:transparent;border:0;border-radius:8px;padding:13px;text-align:left;font-size:14px;} QPushButton:hover{background:#181d27;color:white;}")
+        sl=QVBoxLayout(self.sidebar); sl.setContentsMargins(15,18,15,15)
+        self.logo=QLabel("◉  AUTOMATA\n    LAB")
+        self.logo.setStyleSheet("color:#f8fafc;font-size:17px;font-weight:700;padding:10px;")
+        sl.addWidget(self.logo)
+        self.home_btn=QPushButton(); self.home_btn.clicked.connect(lambda:self.navigate("home")); sl.addWidget(self.home_btn)
+        self.mode_btn=QPushButton(); self.mode_btn.clicked.connect(self.open_grammar); sl.addWidget(self.mode_btn)
+        self.nav=[]
+        for key in ("designer","simulator","table","convert"):
+            b=QPushButton(); b.clicked.connect(lambda _,k=key:self.navigate(k)); self.nav.append((key,b)); sl.addWidget(b)
+        sl.addStretch()
+        self.lang=QPushButton(); self.lang.clicked.connect(self.toggle_lang); sl.addWidget(self.lang)
+        self.author=QLabel(AUTHOR); self.author.setWordWrap(True); self.author.setStyleSheet("color:#657185;font-size:10px;padding:10px;"); sl.addWidget(self.author)
+        outer.addWidget(self.sidebar)
+        self.stack=QStackedWidget(); outer.addWidget(self.stack,1)
+        self.stack.addWidget(self._home())
+        self.stack.addWidget(self._designer())
+        self.stack.addWidget(self._simulator())
+        self.stack.addWidget(self._table())
+        self.stack.addWidget(self._convert())
+        self.stack.addWidget(self._grammar_lab())
+
+    def panel(self):
+        return "QFrame{background:#151a23;border:1px solid #272f3d;border-radius:12px;} QLabel{color:#aab5c5;} QLineEdit,QComboBox,QListWidget,QTextEdit{background:#0d1118;color:#f4f6fb;border:1px solid #303949;border-radius:7px;padding:8px;} QPushButton{background:#252b39;color:#f7f8fb;border:0;border-radius:7px;padding:9px 13px;} QPushButton:hover{background:#353d50;}"
+
+    def _page(self):
+        w=QWidget(); l=QVBoxLayout(w); l.setContentsMargins(28,24,28,22); l.setSpacing(14)
+        h=QHBoxLayout(); title=QLabel(); title.setStyleSheet("font-size:25px;font-weight:700;color:#f8fafc;"); h.addWidget(title); h.addStretch()
+        badge=QLabel(); badge.setStyleSheet("background:#242039;color:#bdb6ff;padding:7px 14px;border-radius:8px;"); h.addWidget(badge); l.addLayout(h)
+        return w,l,title,badge
+
+    def _home(self):
+        w=QWidget(); l=QVBoxLayout(w); l.setContentsMargins(70,55,70,55); l.setSpacing(22)
+        title=QLabel("Automata Simulator"); title.setStyleSheet("font-size:34px;font-weight:800;color:#f8fafc;")
+        sub=QLabel(); sub.setObjectName("home_sub"); sub.setStyleSheet("font-size:15px;color:#8e9aae;")
+        l.addWidget(title); l.addWidget(sub)
+        cards=QHBoxLayout(); cards.setSpacing(18)
+        a=QFrame(); a.setStyleSheet(self.panel()); al=QVBoxLayout(a)
+        at=QLabel("◉  Automata Lab"); at.setStyleSheet("font-size:23px;font-weight:700;color:#f8fafc;")
+        ad=QLabel(); ad.setWordWrap(True); ad.setStyleSheet("font-size:13px;color:#8e9aae;"); al.addWidget(at); al.addWidget(ad); al.addStretch()
+        ab=QPushButton(); ab.setMinimumHeight(52); ab.clicked.connect(lambda:self.navigate("designer")); al.addWidget(ab)
+        g=QFrame(); g.setStyleSheet(self.panel()); gl=QVBoxLayout(g)
+        gt=QLabel("⌘  Grammar Lab"); gt.setStyleSheet("font-size:23px;font-weight:700;color:#f8fafc;")
+        gd=QLabel(); gd.setWordWrap(True); gd.setStyleSheet("font-size:13px;color:#8e9aae;"); gl.addWidget(gt); gl.addWidget(gd); gl.addStretch()
+        gb=QPushButton(); gb.setMinimumHeight(52); gb.clicked.connect(self.open_grammar); gl.addWidget(gb)
+        cards.addWidget(a); cards.addWidget(g); l.addLayout(cards)
+        note=QLabel(AUTHOR); note.setAlignment(Qt.AlignCenter); note.setStyleSheet("color:#596579;padding:20px;"); l.addWidget(note)
+        self.home_sub,self.auto_desc,self.grammar_desc,self.auto_btn,self.grammar_btn=sub,ad,gd,ab,gb
+        return w
+
+    def _designer(self):
+        w,l,self.dtitle,self.dbadge=self._page()
+        top=QFrame(); top.setStyleSheet(self.panel()); tl=QHBoxLayout(top)
+        self.add_btn=QPushButton(); self.add_btn.clicked.connect(self.create_state)
+        self.edge_btn=QPushButton(); self.edge_btn.setCheckable(True); self.edge_btn.toggled.connect(self.toggle_edge)
+        self.start_btn=QPushButton(); self.start_btn.clicked.connect(self.set_start)
+        self.final_btn=QPushButton(); self.final_btn.clicked.connect(self.toggle_final)
+        self.delete_btn=QPushButton(); self.delete_btn.clicked.connect(self.delete_selected)
+        for b in (self.add_btn,self.edge_btn,self.start_btn,self.final_btn,self.delete_btn): tl.addWidget(b)
+        tl.addStretch(); l.addWidget(top)
+        self.design_graph=GraphView(editable=True); self.design_graph.state_clicked.connect(self.on_graph_state); self.design_graph.changed.connect(self._refresh)
+        l.addWidget(self.design_graph,1)
+        self.design_hint=QLabel(); self.design_hint.setWordWrap(True); self.design_hint.setStyleSheet("color:#738095;padding:4px;"); l.addWidget(self.design_hint)
+        return w
+
+    def _simulator(self):
+        w,l,self.stitle,self.sbadge=self._page()
+        self.sim_graph=GraphView(); l.addWidget(self.sim_graph,1)
+        bar=QFrame(); bar.setStyleSheet(self.panel()); bl=QHBoxLayout(bar)
+        self.input=QLineEdit("0101"); self.input.setMinimumWidth(240)
+        self.run=QPushButton(); self.step=QPushButton(); self.reset=QPushButton()
+        self.run.clicked.connect(self.run_sim); self.step.clicked.connect(self.step_sim); self.reset.clicked.connect(self.reset_sim)
+        self.current_label=QLabel(); self.status=QLabel()
+        for x in (self.input,self.run,self.step,self.reset,self.current_label,self.status): bl.addWidget(x)
+        l.addWidget(bar); self.path_label=QLabel(); self.path_label.setStyleSheet("color:#7e8ca1;padding:3px;"); l.addWidget(self.path_label)
+        return w
+
+    def _table(self):
+        w,l,self.ttitle,self.tbadge=self._page()
+        self.tw=QTableWidget(); self.tw.setEditTriggers(QTableWidget.NoEditTriggers); self.tw.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch); l.addWidget(self.tw)
+        return w
+
+    def _convert(self):
+        w,l,self.ctitle,self.cbadge=self._page()
+        bar=QFrame(); bar.setStyleSheet(self.panel()); bl=QHBoxLayout(bar)
+        self.convert=QPushButton(); self.convert.clicked.connect(self.convert_nfa); bl.addWidget(self.convert); bl.addStretch(); l.addWidget(bar)
+        self.cg=GraphView(); l.addWidget(self.cg,1)
+        self.cinfo=QTextEdit(); self.cinfo.setReadOnly(True); self.cinfo.setMaximumHeight(160); l.addWidget(self.cinfo)
+        return w
+
+    def _grammar_lab(self):
+        w,l,self.gtitle,self.gbadge=self._page()
+        toolbar=QHBoxLayout()
+        self.back_auto=QPushButton(); self.back_auto.clicked.connect(lambda:self.navigate("designer"))
+        self.parse_btn=QPushButton(); self.parse_btn.clicked.connect(self.grammar_parse)
+        self.leftrec_btn=QPushButton(); self.leftrec_btn.clicked.connect(self.grammar_leftrec)
+        toolbar.addWidget(self.back_auto); toolbar.addWidget(self.parse_btn); toolbar.addWidget(self.leftrec_btn); toolbar.addStretch()
+        l.addLayout(toolbar)
+        body=QHBoxLayout()
+        left=QFrame(); left.setStyleSheet(self.panel()); ll=QVBoxLayout(left)
+        self.grammar_editor=QTextEdit(self.grammar_text); self.grammar_editor.setMinimumWidth(330)
+        self.grammar_input=QLineEdit("abb"); self.grammar_input.setPlaceholderText("String / رشته")
+        ll.addWidget(QLabel("Grammar / گرامر")); ll.addWidget(self.grammar_editor,1); ll.addWidget(QLabel("Test String / رشته ورودی")); ll.addWidget(self.grammar_input)
+        body.addWidget(left,1)
+        middle=QFrame(); middle.setStyleSheet(self.panel()); ml=QVBoxLayout(middle)
+        self.tree_view=QTextEdit(); self.tree_view.setReadOnly(True); ml.addWidget(QLabel("Parse Tree / درخت تجزیه")); ml.addWidget(self.tree_view,1)
+        self.derivation=QTextEdit(); self.derivation.setReadOnly(True); ml.addWidget(QLabel("Leftmost Derivation / اشتقاق چپ‌ترین")); ml.addWidget(self.derivation,1)
+        body.addWidget(middle,1)
+        right=QFrame(); right.setStyleSheet(self.panel()); rl=QVBoxLayout(right)
+        self.analysis=QTextEdit(); self.analysis.setReadOnly(True); rl.addWidget(QLabel("Analysis / تحلیل")); rl.addWidget(self.analysis,1)
+        body.addWidget(right,1)
+        l.addLayout(body,1)
+        return w
+
+    def create_state(self):
+        i=0
+        while f"q{i}" in self.machine.states: i+=1
+        self.machine.add_state(f"q{i}"); self._refresh(); self.design_graph.selected=f"q{i}"; self.design_graph.update()
+
+    def on_graph_state(self,s):
+        self.design_graph.selected=s; self.design_graph.setFocus(); self._refresh()
+
+    def toggle_edge(self,on):
+        self.design_graph.edge_mode=on; self.edge_btn.setText(self.tr("edge_mode") if on else self.tr("edge_draw"))
+
+    def set_start(self):
+        s=self.design_graph.selected
+        if s: self.machine.start=s; self.current=s; self.path=[s]; self._refresh()
+
+    def toggle_final(self):
+        s=self.design_graph.selected
+        if not s:return
+        if s in self.machine.finals:self.machine.finals.remove(s)
+        else:self.machine.finals.add(s)
+        self._refresh()
+
+    def delete_selected(self):
+        s=self.design_graph.selected
+        if s: self.machine.remove_state(s); self.design_graph.selected=None; self._refresh()
+
+    def _refresh(self):
+        self._texts()
+        self.design_graph.set_automaton(self.machine,self.current,self.path)
+        self.sim_graph.set_automaton(self.machine,self.current,self.path)
+        self._table_refresh()
+        self.current_label.setText(f"{self.tr('current')}: {self.current or '—'}")
+        self.status.setText(f"{self.tr('result')}: {self.tr('ready')}")
+        self.path_label.setText(f"{self.tr('path')}: " + " → ".join(self.path))
+
+    def _table_refresh(self):
+        self.tw.setColumnCount(len(self.machine.alphabet)+1)
+        self.tw.setHorizontalHeaderLabels([self.tr("state")]+self.machine.alphabet)
+        self.tw.setRowCount(len(self.machine.states))
+        for r,s in enumerate(self.machine.states):
+            self.tw.setItem(r,0,QTableWidgetItem(("→ " if s==self.machine.start else "")+("* " if s in self.machine.finals else "")+s))
+            for c,sym in enumerate(self.machine.alphabet,1):
+                ds=sorted(self.machine.destinations(s,sym)); self.tw.setItem(r,c,QTableWidgetItem(", ".join(ds) if ds else "—"))
+
+    def tr(self,k):
+        fa={
+        "home":"خانه","automata":"بخش اتوماتا","grammar":"Grammar Lab / آزمایشگاه گرامر",
+        "designer":"طراحی ماشین","simulator":"شبیه‌ساز","table":"جدول انتقال","convert":"NFA → DFA",
+        "current":"حالت فعلی","result":"نتیجه","ready":"آماده","run":"اجرا","step":"مرحله بعد","reset":"بازنشانی",
+        "start":"شروع","final":"نهایی","delete":"حذف حالت","state":"حالت","path":"مسیر",
+        "accepted":"پذیرفته شد ✓","rejected":"رد شد ✕","add_state":"+ حالت","edge_mode":"✓ حالت رسم","edge_draw":"رسم انتقال",
+        "hint":"دوبارکلیک = حالت جدید  •  کشیدن = جابه‌جایی  •  رسم انتقال = اتصال دو حالت  •  Delete = حذف حالت",
+        "error":"خطا","conversion":"تبدیل","set_start_first":"ابتدا یک حالت شروع تعیین کنید.","already_dfa":"ماشین فعلی از قبل DFA است.",
+        "dfa_created":"DFA با روش ساخت زیرمجموعه‌ای ساخته شد","states":"حالت‌ها","start_state":"شروع","final_states":"نهایی","transitions":"انتقال‌ها",
+        "no_final":"—","transition":"انتقال","symbol_prompt":"نماد (0، 1، ε):","open_automata":"ورود به بخش اتوماتا","open_grammar":"ورود به بخش گرامر",
+        "home_sub":"محیط آموزشی برای اتوماتاهای متناهی و گرامرهای مستقل از متن","auto_desc":"طراحی گرافیکی DFA/NFA، شبیه‌سازی، جدول انتقال و NFA → DFA",
+        "grammar_desc":"نوشتن Grammar، بررسی، تست رشته، Parse Tree، اشتقاق، FIRST/FOLLOW و حذف بازگشت چپ",
+        "back_auto":"← اتوماتا","parse":"تحلیل و اجرای گرامر","leftrec":"حذف بازگشت چپ","grammar_title":"آزمایشگاه گرامر",
+        "valid":"گرامر معتبر است ✓","invalid":"خطاهای گرامر","accepted_word":"رشته توسط گرامر تولید می‌شود ✓","rejected_word":"رشته توسط گرامر تولید نمی‌شود ✕",
+        "first":"FIRST","follow":"FOLLOW","classification":"رده‌بندی","production":"تولیدها","grammar_error":"خطای گرامر"
+        }
+        en={
+        "home":"Home","automata":"Automata Lab","grammar":"Grammar Lab","designer":"Designer","simulator":"Simulator","table":"Transition Table","convert":"NFA → DFA",
+        "current":"Current State","result":"Result","ready":"Ready","run":"Run","step":"Step","reset":"Reset","start":"Set Start","final":"Toggle Final","delete":"Delete State","state":"State","path":"Path",
+        "accepted":"Accepted ✓","rejected":"Rejected ✕","add_state":"+ State","edge_mode":"✓ Edge mode","edge_draw":"Draw Transition",
+        "hint":"Double-click = new state  •  Drag = move  •  Draw Transition = connect two states  •  Delete = remove selected state",
+        "error":"Error","conversion":"Conversion","set_start_first":"Set a start state first.","already_dfa":"The current machine is already a DFA.","dfa_created":"DFA created by subset construction",
+        "states":"States","start_state":"Start","final_states":"Final","transitions":"Transitions","no_final":"—","transition":"Transition","symbol_prompt":"Symbol (0, 1, ε):",
+        "open_automata":"Open Automata Lab","open_grammar":"Open Grammar Lab","home_sub":"An educational workspace for finite automata and context-free grammars",
+        "auto_desc":"Visual DFA/NFA design, simulation, transition table and NFA → DFA","grammar_desc":"Grammar writing, validation, string testing, parse tree, derivation, FIRST/FOLLOW and left-recursion removal",
+        "back_auto":"← Automata Lab","parse":"Analyze & Run Grammar","leftrec":"Remove Left Recursion","grammar_title":"Grammar Lab","valid":"Grammar is valid ✓","invalid":"Grammar errors",
+        "accepted_word":"String is generated by the grammar ✓","rejected_word":"String is not generated by the grammar ✕","first":"FIRST","follow":"FOLLOW","classification":"Classification","production":"Productions","grammar_error":"Grammar Error"
+        }
+        return (fa if self.lang=="fa" else en).get(k,k)
+
+    def _texts(self):
+        self.home_btn.setText(self.tr("home")); self.mode_btn.setText(self.tr("grammar"))
+        for k,b in self.nav:b.setText(self.tr(k))
+        self.lang.setText("فارسی / English")
+        self.dtitle.setText(self.tr("designer")); self.stitle.setText(self.tr("simulator")); self.ttitle.setText(self.tr("table")); self.ctitle.setText(self.tr("convert"))
+        typ="DFA" if self.machine.is_deterministic() else "NFA"
+        for b in (self.dbadge,self.sbadge,self.tbadge,self.cbadge):b.setText(typ)
+        self.add_btn.setText(self.tr("add_state")); self.start_btn.setText(self.tr("start")); self.final_btn.setText(self.tr("final")); self.delete_btn.setText(self.tr("delete"))
+        self.edge_btn.setText(self.tr("edge_mode") if self.edge_btn.isChecked() else self.tr("edge_draw")); self.run.setText(self.tr("run")); self.step.setText(self.tr("step")); self.reset.setText(self.tr("reset")); self.convert.setText(self.tr("convert"))
+        self.design_hint.setText(self.tr("hint"))
+        self.home_sub.setText(self.tr("home_sub")); self.auto_desc.setText(self.tr("auto_desc")); self.grammar_desc.setText(self.tr("grammar_desc"))
+        self.auto_btn.setText(self.tr("open_automata")); self.grammar_btn.setText(self.tr("open_grammar"))
+        self.gtitle.setText(self.tr("grammar_title")); self.gbadge.setText("CFG")
+        self.back_auto.setText(self.tr("back_auto")); self.parse_btn.setText(self.tr("parse")); self.leftrec_btn.setText(self.tr("leftrec"))
+
+    def navigate(self,k):
+        idx={"home":0,"designer":1,"simulator":2,"table":3,"convert":4,"grammar":5}
+        self.stack.setCurrentIndex(idx[k])
+
+    def open_grammar(self):
+        self.navigate("grammar")
+
+    def reset_sim(self):
+        self.current=self.machine.start; self.input_index=0; self.path=[self.current] if self.current else []; self._refresh()
+
+    def run_sim(self):
+        text=self.input.text().strip()
+        try:
+            if not self.machine.start: raise ValueError(self.tr("set_start_first"))
+            if self.machine.is_deterministic():
+                ok,path=self.machine.simulate_dfa(text); self.current=path[-1]; self.path=path
+            else:
+                ok,paths=self.machine.simulate_nfa(text); self.path=["{"+",".join(sorted(x))+"}" for x in paths]; self.current=self.path[-1]
+            self.sim_graph.set_automaton(self.machine,self.current,self.path)
+            self.current_label.setText(f"{self.tr('current')}: {self.current}")
+            self.status.setText(f"{self.tr('result')}: {self.tr('accepted') if ok else self.tr('rejected')}")
+            self.path_label.setText(f"{self.tr('path')}: " + " → ".join(self.path))
+        except Exception as ex: QMessageBox.warning(self,self.tr("error"),str(ex))
+
+    def step_sim(self):
+        text=self.input.text().strip()
+        try:
+            if not self.machine.start: raise ValueError(self.tr("set_start_first"))
+            if self.input_index==0: self.current=self.machine.start; self.path=[self.current]
+            if self.input_index>=len(text):
+                ok=self.current in self.machine.finals; self.status.setText(f"{self.tr('result')}: {self.tr('accepted') if ok else self.tr('rejected')}"); return
+            ch=text[self.input_index]
+            if not self.machine.is_deterministic():
+                _,paths=self.machine.simulate_nfa(text[:self.input_index+1]); states=paths[-1]; self.current="{"+",".join(sorted(states))+"}"
+            else: self.current=self.machine.step_dfa(self.current,ch)
+            self.path.append(self.current); self.input_index+=1; self.sim_graph.set_automaton(self.machine,self.current,self.path)
+            self.current_label.setText(f"{self.tr('current')}: {self.current}"); self.path_label.setText(f"{self.tr('path')}: " + " → ".join(self.path))
+        except Exception as ex: QMessageBox.warning(self,self.tr("error"),str(ex))
+
+    def convert_nfa(self):
+        try:
+            if self.machine.is_deterministic(): raise ValueError(self.tr("already_dfa"))
+            dfa=self.machine.to_dfa(); self.cg.set_automaton(dfa,dfa.start)
+            lines=[self.tr("dfa_created"),"",f"{self.tr('states')}: {', '.join(dfa.states)}",f"{self.tr('start_state')}: {dfa.start}",f"{self.tr('final_states')}: {', '.join(sorted(dfa.finals)) or self.tr('no_final')}","",f"{self.tr('transitions')}:"] 
+            lines += [f"{t.source} --{t.symbol}--> {t.target}" for t in dfa.transitions]; self.cinfo.setPlainText("\n".join(lines))
+        except Exception as ex: QMessageBox.warning(self,self.tr("conversion"),str(ex))
+
+    def grammar_parse(self):
+        try:
+            self.grammar=ContextFreeGrammar("S").parse(self.grammar_editor.toPlainText())
+            errors=self.grammar.validate()
+            first=self.grammar.first_sets(); follow=self.grammar.follow_sets()
+            word=self.grammar_input.text().strip()
+            ok,tree,tokens=self.grammar.parse_string(word)
+            lines=[self.tr("valid") if not errors else self.tr("invalid")+":"] + errors
+            lines += ["",f"{self.tr('classification')}: {self.grammar.classification()}",f"{self.tr('production')}: {len(self.grammar.productions)}","",f"{self.tr('first')}:"] 
+            for n in sorted(first): lines.append(f"FIRST({n}) = {{ {', '.join(sorted(first[n]))} }}")
+            lines += ["",f"{self.tr('follow')}:"] 
+            for n in sorted(follow): lines.append(f"FOLLOW({n}) = {{ {', '.join(sorted(follow[n]))} }}")
+            lines += ["",self.tr("accepted_word") if ok else self.tr("rejected_word")]
+            self.analysis.setPlainText("\n".join(lines))
+            if ok:
+                self.tree_view.setPlainText(self.format_tree(tree))
+                self.derivation.setPlainText("\n".join(self.grammar.leftmost_derivation(tree)))
+            else:
+                self.tree_view.setPlainText("—"); self.derivation.setPlainText("—")
+        except Exception as ex:
+            QMessageBox.warning(self,self.tr("grammar_error"),str(ex))
+
+    def format_tree(self,tree,indent=""):
+        if tree is None:return "—"
+        if tree[0]=="token":return indent+tree[1]
+        lines=[indent+tree[1]]
+        for child in tree[2]:
+            lines.append(self.format_tree(child,indent+"  "))
+        return "\n".join(lines)
+
+    def grammar_leftrec(self):
+        try:
+            g=ContextFreeGrammar("S").parse(self.grammar_editor.toPlainText())
+            g.remove_left_recursion()
+            self.grammar_editor.setPlainText(g.text())
+            self.grammar_parse()
+        except Exception as ex: QMessageBox.warning(self,self.tr("grammar_error"),str(ex))
+
+    def toggle_lang(self):
+        self.lang="fa" if self.lang=="en" else "en"
+        self.setLayoutDirection(Qt.RightToLeft if self.lang=="fa" else Qt.LeftToRight)
+        self._refresh()
+
+if __name__=="__main__":
+    app=QApplication(sys.argv); app.setStyle("Fusion")
+    app.setStyleSheet("QMainWindow,QWidget{background:#10141c;color:#e5e7eb;font-family:'Segoe UI';} QHeaderView::section{background:#1b212c;color:#cbd5e1;padding:8px;border:0;} QTableWidget{background:#121720;color:#e5e7eb;gridline-color:#303746;border:1px solid #272f3d;}")
     win=MainWindow(); win.show(); sys.exit(app.exec())
