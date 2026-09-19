@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QStackedWidget,
     QFrame, QMessageBox, QComboBox, QCheckBox, QListWidget, QListWidgetItem,
-    QHeaderView, QGroupBox, QFormLayout, QInputDialog
+    QHeaderView, QGroupBox, QFormLayout, QInputDialog, QTextEdit
 )
 from automata import FiniteAutomaton, Transition, EPSILON
 
