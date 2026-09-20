@@ -1,3 +1,9 @@
+"""Context-Free Grammar engine used by the Grammar Lab.
+
+The module is intentionally independent from the GUI. It contains the parsing
+and transformation algorithms that are demonstrated by the application.
+"""
+
 from dataclasses import dataclass
 from collections import defaultdict, deque
 import re
@@ -85,7 +91,7 @@ class ContextFreeGrammar:
             errors.append("Unreachable nonterminals: " + ", ".join(unreachable))
         return errors
 
-    def first_sets(self):
+    # FIRST is calculated with fixed-point iteration until no set changes.\n    def first_sets(self):
         first = {n: set() for n in self.nonterminals}
         changed = True
         while changed:
@@ -128,7 +134,7 @@ class ContextFreeGrammar:
             out.add(EPSILON)
         return out
 
-    def follow_sets(self):
+    # FOLLOW starts with $ for the start symbol and propagates information.\n    def follow_sets(self):
         first = self.first_sets()
         follow = {n: set() for n in self.nonterminals}
         follow[self.start].add("$")
@@ -148,7 +154,7 @@ class ContextFreeGrammar:
                     changed |= len(follow[sym]) != before
         return follow
 
-    def parse_string(self, text):
+    # Input parsing uses a compact Earley-style chart representation.\n    def parse_string(self, text):
         tokens = text.split() if " " in text.strip() else list(text.strip()) if text.strip() else []
         n = len(tokens)
         # Earley-style chart storing one representative derivation per state.
@@ -258,7 +264,7 @@ class ContextFreeGrammar:
             regular=False
         return "Type 3 — Regular" if regular else "Type 2 — Context-Free"
 
-    def remove_left_recursion(self):
+    # Transformation used to prepare grammars for predictive parsing.\n    def remove_left_recursion(self):
         # Direct left-recursion elimination for each nonterminal.
         new=[]
         for A in list(self.nonterminals):
@@ -278,7 +284,7 @@ class ContextFreeGrammar:
         self.terminals={s for p in new for s in p.right if s not in self.nonterminals}
         return self
 
-    def ll1_table(self):
+    # LL(1) cells are reported as conflicts when multiple productions map to one cell.\n    def ll1_table(self):
         """Return an LL(1) parsing table and a list of conflicts."""
         first=self.first_sets(); follow=self.follow_sets()
         table={}
@@ -298,7 +304,7 @@ class ContextFreeGrammar:
             rendered[key]=[f"{p.left} -> {EPSILON if not p.right else ' '.join(p.right)}" for p in prods]
         return rendered,conflicts
 
-    def left_factor(self):
+    # Repeated prefixes are extracted into helper nonterminals.\n    def left_factor(self):
         """Apply simple repeated-prefix left factoring until no pair shares a prefix."""
         changed=True
         while changed:
