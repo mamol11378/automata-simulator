@@ -10,7 +10,7 @@ class AutomataTests(unittest.TestCase):
             "q0", {"q1"}
         )
         self.assertTrue(a.simulate_dfa("0")[0])
-        self.assertTrue(a.simulate_dfa("01")[0])
+        # 01 ends in q0, which is not accepting in this DFA.\n        self.assertFalse(a.simulate_dfa("01")[0])
 
     def test_nfa_to_dfa(self):
         a = FiniteAutomaton(
