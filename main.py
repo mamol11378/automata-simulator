@@ -147,32 +147,33 @@ class MainWindow(QMainWindow):
         w,l,self.gtitle,self.gbadge=self._page()
         w.setStyleSheet(self.panel())
         toolbar=QFrame();toolbar.setStyleSheet(self.panel());tb=QHBoxLayout(toolbar)
-        self.gback=QPushButton("← Automata Lab");self.ganalyze=QPushButton("▶  Analyze & Test");self.gleft=QPushButton("↻ Remove Left Recursion");self.gfactor=QPushButton("⇥ Left Factor");self.gll1=QPushButton("▦ LL(1) Table")
+        self.gback=QPushButton();self.ganalyze=QPushButton();self.gleft=QPushButton();self.gfactor=QPushButton();self.gll1=QPushButton()
         self.gback.clicked.connect(lambda:self.navigate("designer"));self.ganalyze.clicked.connect(self.grammar_analyze);self.gleft.clicked.connect(self.grammar_left);self.gfactor.clicked.connect(self.grammar_factor);self.gll1.clicked.connect(self.grammar_ll1)
         for b in (self.gback,self.ganalyze,self.gleft,self.gfactor,self.gll1):b.setMinimumHeight(40);tb.addWidget(b)
         l.addWidget(toolbar)
 
-        info=QLabel("Write productions like  S → a A | ε    •    Test a string below    •    Analyze to build the tree and grammar report")
+        info=QLabel();info.setObjectName("grammar_info")
         info.setStyleSheet("color:#8793a7;padding:5px 2px;");l.addWidget(info)
 
         split=QSplitter(Qt.Horizontal)
         left=QFrame();left.setStyleSheet(self.panel());ll=QVBoxLayout(left)
-        head=QHBoxLayout();lab=QLabel("Grammar Editor");lab.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");example=QPushButton("Load Example");example.clicked.connect(lambda:self.geditor.setPlainText("E -> E + T | T\\nT -> T * F | F\\nF -> ( E ) | id"));head.addWidget(lab);head.addStretch();head.addWidget(example);ll.addLayout(head)
+        head=QHBoxLayout();lab=QLabel();lab.setObjectName("grammar_editor_label");lab.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");example=QPushButton();example.setObjectName("grammar_example_btn");example.clicked.connect(lambda:self.geditor.setPlainText("E -> E + T | T\\nT -> T * F | F\\nF -> ( E ) | id"));head.addWidget(lab);head.addStretch();head.addWidget(example);ll.addLayout(head)
         self.geditor=QTextEdit(self.grammar_text);self.geditor.setStyleSheet("QTextEdit{font-family:'Consolas';font-size:14px;background:#0b1017;border:1px solid #303949;border-radius:9px;padding:10px;color:#e8edf5;}");ll.addWidget(self.geditor,1)
         ll.addWidget(QLabel("Input string"));self.ginput=QLineEdit("abb");self.ginput.setMinimumHeight(40);ll.addWidget(self.ginput)
         split.addWidget(left)
 
         mid=QFrame();mid.setStyleSheet(self.panel());ml=QVBoxLayout(mid)
-        t=QLabel("Parse Tree");t.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");ml.addWidget(t)
+        t=QLabel();t.setObjectName("grammar_tree_label");t.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");ml.addWidget(t)
         self.gtree=QTextEdit();self.gtree.setReadOnly(True);self.gtree.setStyleSheet("QTextEdit{font-family:'Consolas';font-size:14px;background:#0b1017;border:1px solid #303949;border-radius:9px;color:#d9e1ef;padding:12px;}");ml.addWidget(self.gtree,1)
-        d=QLabel("Derivation");d.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");ml.addWidget(d)
+        d=QLabel();d.setObjectName("grammar_derivation_label");d.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");ml.addWidget(d)
         self.gder=QTextEdit();self.gder.setReadOnly(True);self.gder.setMaximumHeight(180);ml.addWidget(self.gder)
         split.addWidget(mid)
 
         right=QFrame();right.setStyleSheet(self.panel());rl=QVBoxLayout(right)
         tabs=QHBoxLayout()
-        for txt in ("Analysis","FIRST / FOLLOW","LL(1)"):
-            q=QPushButton(txt);q.setMinimumHeight(34);tabs.addWidget(q)
+        self.gtab_buttons=[]
+        for txt,key in (("Analysis","analysis"),("FIRST / FOLLOW","first_follow"),("LL(1)","ll1")):
+            q=QPushButton();q.setObjectName("grammar_tab_"+key);q.setMinimumHeight(34);self.gtab_buttons.append((key,q));tabs.addWidget(q)
         rl.addLayout(tabs)
         self.ganalysis=QTextEdit();self.ganalysis.setReadOnly(True);self.ganalysis.setStyleSheet("QTextEdit{font-family:'Consolas';background:#0b1017;border:1px solid #303949;border-radius:9px;color:#d9e1ef;padding:12px;}");rl.addWidget(self.ganalysis,1)
         split.addWidget(right)
