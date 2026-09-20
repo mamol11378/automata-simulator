@@ -278,6 +278,53 @@ class ContextFreeGrammar:
         self.terminals={s for p in new for s in p.right if s not in self.nonterminals}
         return self
 
+    def ll1_table(self):
+        """Return an LL(1) parsing table and a list of conflicts."""
+        first=self.first_sets(); follow=self.follow_sets()
+        table={}
+        conflicts=[]
+        for p in self.productions:
+            seq_first=self.first_of_sequence(p.right,first)
+            targets=set(seq_first-{EPSILON})
+            if EPSILON in seq_first:
+                targets |= follow[p.left]
+            for terminal in targets:
+                key=(p.left,terminal)
+                table.setdefault(key,[]).append(p)
+                if len(table[key])>1:
+                    conflicts.append(f"{p.left}, {terminal}: multiple productions")
+        rendered={}
+        for key,prods in table.items():
+            rendered[key]=[f"{p.left} -> {EPSILON if not p.right else ' '.join(p.right)}" for p in prods]
+        return rendered,conflicts
+
+    def left_factor(self):
+        """Apply simple repeated-prefix left factoring until no pair shares a prefix."""
+        changed=True
+        while changed:
+            changed=False
+            new=[]
+            for A in list(self.nonterminals):
+                prods=[p.right for p in self.productions if p.left==A]
+                groups={}
+                for r in prods:
+                    if r: groups.setdefault(r[0],[]).append(r)
+                factor=next(((sym,rs) for sym,rs in groups.items() if len(rs)>1),None)
+                if not factor:
+                    new.extend(Production(A,r) for r in prods); continue
+                sym,rs=factor; idx=1; Apr=A+"F"
+                while Apr in self.nonterminals: idx+=1; Apr=A+"F"*idx
+                self.nonterminals.add(Apr)
+                for r in prods:
+                    if r in rs: continue
+                    new.append(Production(A,r))
+                new.append(Production(A,(sym,Apr)))
+                for r in rs:new.append(Production(Apr,r[1:]))
+                changed=True
+            self.productions=new
+        self.terminals={s for p in self.productions for s in p.right if s not in self.nonterminals}
+        return self
+
     def text(self):
         groups=defaultdict(list)
         for p in self.productions: groups[p.left].append(EPSILON if not p.right else " ".join(p.right))
