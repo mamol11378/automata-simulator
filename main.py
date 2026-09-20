@@ -112,12 +112,12 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1200,780);root=QWidget();self.setCentralWidget(root);out=QHBoxLayout(root);out.setContentsMargins(0,0,0,0)
         side=QFrame();side.setFixedWidth(220);side.setStyleSheet("QFrame{background:#0a0d13;} QPushButton{color:#aeb8c8;background:transparent;border:0;border-radius:8px;padding:13px;text-align:left;font-size:14px;} QPushButton:hover{background:#181d27;color:white;}")
         sl=QVBoxLayout(side);self.logo=QLabel("◉  AUTOMATA\n    LAB");self.logo.setStyleSheet("color:#f8fafc;font-size:17px;font-weight:700;padding:10px;");sl.addWidget(self.logo)
-        self.home_btn=QPushButton();self.home_btn.clicked.connect(lambda:self.navigate("home"));sl.addWidget(self.home_btn)
-        self.auto_btn=QPushButton();self.auto_btn.clicked.connect(lambda:self.navigate("designer"));sl.addWidget(self.auto_btn)
-        self.grammar_btn=QPushButton();self.grammar_btn.clicked.connect(lambda:self.navigate("grammar"));sl.addWidget(self.grammar_btn)
+        self.home_btn=QPushButton();self.home_btn.setMinimumHeight(42);self.home_btn.clicked.connect(lambda:self.navigate("home"));sl.addWidget(self.home_btn)
+        self.auto_btn=QPushButton();self.auto_btn.setMinimumHeight(42);self.auto_btn.clicked.connect(lambda:self.navigate("designer"));sl.addWidget(self.auto_btn)
+        self.grammar_btn=QPushButton();self.grammar_btn.setMinimumHeight(42);self.grammar_btn.clicked.connect(lambda:self.navigate("grammar"));sl.addWidget(self.grammar_btn)
         self.nav=[]
         for k in ("designer","simulator","table","convert"):
-            b=QPushButton();b.clicked.connect(lambda _,x=k:self.navigate(x));self.nav.append((k,b));sl.addWidget(b)
+            b=QPushButton();b.setMinimumHeight(40);b.clicked.connect(lambda _,x=k:self.navigate(x));self.nav.append((k,b));sl.addWidget(b)
         sl.addStretch();self.lang_btn=QPushButton();self.lang_btn.clicked.connect(self.toggle_lang);sl.addWidget(self.lang_btn)
         sl.addWidget(QLabel(AUTHOR));out.addWidget(side);self.stack=QStackedWidget();out.addWidget(self.stack,1)
         self.stack.addWidget(self._home());self.stack.addWidget(self._designer());self.stack.addWidget(self._simulator());self.stack.addWidget(self._table());self.stack.addWidget(self._convert());self.stack.addWidget(self._grammar())
@@ -144,13 +144,42 @@ class MainWindow(QMainWindow):
     def _convert(self):
         w,l,self.ctitle,self.cbadge=self._page();self.convert_btn=QPushButton();self.convert_btn.clicked.connect(self.convert_nfa);l.addWidget(self.convert_btn);self.cg=GraphView();l.addWidget(self.cg,1);self.cinfo=QTextEdit();self.cinfo.setReadOnly(True);self.cinfo.setMaximumHeight(170);l.addWidget(self.cinfo);return w
     def _grammar(self):
-        w,l,self.gtitle,self.gbadge=self._page();tools=QHBoxLayout();self.gback=QPushButton();self.ganalyze=QPushButton();self.gleft=QPushButton();self.gfactor=QPushButton();self.gll1=QPushButton()
+        w,l,self.gtitle,self.gbadge=self._page()
+        w.setStyleSheet(self.panel())
+        toolbar=QFrame();toolbar.setStyleSheet(self.panel());tb=QHBoxLayout(toolbar)
+        self.gback=QPushButton("← Automata Lab");self.ganalyze=QPushButton("▶  Analyze & Test");self.gleft=QPushButton("↻ Remove Left Recursion");self.gfactor=QPushButton("⇥ Left Factor");self.gll1=QPushButton("▦ LL(1) Table")
         self.gback.clicked.connect(lambda:self.navigate("designer"));self.ganalyze.clicked.connect(self.grammar_analyze);self.gleft.clicked.connect(self.grammar_left);self.gfactor.clicked.connect(self.grammar_factor);self.gll1.clicked.connect(self.grammar_ll1)
-        for b in (self.gback,self.ganalyze,self.gleft,self.gfactor,self.gll1):tools.addWidget(b)
-        l.addLayout(tools);split=QSplitter(Qt.Horizontal)
-        left=QFrame();left.setStyleSheet(self.panel());ll=QVBoxLayout(left);ll.addWidget(QLabel("Grammar / گرامر"));self.geditor=QTextEdit(self.grammar_text);ll.addWidget(self.geditor,1);ll.addWidget(QLabel("Test String / رشته ورودی"));self.ginput=QLineEdit("abb");ll.addWidget(self.ginput);split.addWidget(left)
-        mid=QFrame();mid.setStyleSheet(self.panel());ml=QVBoxLayout(mid);ml.addWidget(QLabel("Parse Tree"));self.gtree=QTextEdit();self.gtree.setReadOnly(True);ml.addWidget(self.gtree,1);ml.addWidget(QLabel("Derivations"));self.gder=QTextEdit();self.gder.setReadOnly(True);ml.addWidget(self.gder,1);split.addWidget(mid)
-        right=QFrame();right.setStyleSheet(self.panel());rl=QVBoxLayout(right);rl.addWidget(QLabel("Analysis"));self.ganalysis=QTextEdit();self.ganalysis.setReadOnly(True);rl.addWidget(self.ganalysis);split.addWidget(right);l.addWidget(split,1);return w
+        for b in (self.gback,self.ganalyze,self.gleft,self.gfactor,self.gll1):b.setMinimumHeight(40);tb.addWidget(b)
+        l.addWidget(toolbar)
+
+        info=QLabel("Write productions like  S → a A | ε    •    Test a string below    •    Analyze to build the tree and grammar report")
+        info.setStyleSheet("color:#8793a7;padding:5px 2px;");l.addWidget(info)
+
+        split=QSplitter(Qt.Horizontal)
+        left=QFrame();left.setStyleSheet(self.panel());ll=QVBoxLayout(left)
+        head=QHBoxLayout();lab=QLabel("Grammar Editor");lab.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");example=QPushButton("Load Example");example.clicked.connect(lambda:self.geditor.setPlainText("E -> E + T | T\\nT -> T * F | F\\nF -> ( E ) | id"));head.addWidget(lab);head.addStretch();head.addWidget(example);ll.addLayout(head)
+        self.geditor=QTextEdit(self.grammar_text);self.geditor.setStyleSheet("QTextEdit{font-family:'Consolas';font-size:14px;background:#0b1017;border:1px solid #303949;border-radius:9px;padding:10px;color:#e8edf5;}");ll.addWidget(self.geditor,1)
+        ll.addWidget(QLabel("Input string"));self.ginput=QLineEdit("abb");self.ginput.setMinimumHeight(40);ll.addWidget(self.ginput)
+        split.addWidget(left)
+
+        mid=QFrame();mid.setStyleSheet(self.panel());ml=QVBoxLayout(mid)
+        t=QLabel("Parse Tree");t.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");ml.addWidget(t)
+        self.gtree=QTextEdit();self.gtree.setReadOnly(True);self.gtree.setStyleSheet("QTextEdit{font-family:'Consolas';font-size:14px;background:#0b1017;border:1px solid #303949;border-radius:9px;color:#d9e1ef;padding:12px;}");ml.addWidget(self.gtree,1)
+        d=QLabel("Derivation");d.setStyleSheet("font-size:17px;font-weight:700;color:#f8fafc;");ml.addWidget(d)
+        self.gder=QTextEdit();self.gder.setReadOnly(True);self.gder.setMaximumHeight(180);ml.addWidget(self.gder)
+        split.addWidget(mid)
+
+        right=QFrame();right.setStyleSheet(self.panel());rl=QVBoxLayout(right)
+        tabs=QHBoxLayout()
+        for txt in ("Analysis","FIRST / FOLLOW","LL(1)"):
+            q=QPushButton(txt);q.setMinimumHeight(34);tabs.addWidget(q)
+        rl.addLayout(tabs)
+        self.ganalysis=QTextEdit();self.ganalysis.setReadOnly(True);self.ganalysis.setStyleSheet("QTextEdit{font-family:'Consolas';background:#0b1017;border:1px solid #303949;border-radius:9px;color:#d9e1ef;padding:12px;}");rl.addWidget(self.ganalysis,1)
+        split.addWidget(right)
+        split.setSizes([430,430,360])
+        l.addWidget(split,1)
+        return w
+
     def _edge_mode(self,on):self.design_graph.edge_mode=on;self.edge_btn.setText("✓ Edge mode" if on else "Draw Transition")
     def _select(self,s):self.design_graph.selected=s;self._refresh()
     def create_state(self):
